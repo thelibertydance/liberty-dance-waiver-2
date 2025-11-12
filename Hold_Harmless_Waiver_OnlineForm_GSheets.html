@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Hold Harmless Agreement — Liberty Dance Fellowship</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family: Arial, sans-serif; margin:20px; max-width:900px;}
+    label{display:block; margin-top:10px; font-weight:600;}
+    input[type=text], input[type=date]{width:100%; padding:8px; box-sizing:border-box;}
+    .phones{display:flex; gap:10px;}
+    .phones input{flex:1;}
+    .child-row{display:flex; gap:8px; margin-top:6px;}
+    .child-row input{flex:1; padding:6px;}
+    .child-row input.small{flex:0 0 72px;}
+    #children{margin-top:8px;}
+    button{margin-top:12px; padding:8px 12px;}
+    #signature-pad{border:1px solid #ccc; width:100%; height:150px; touch-action: none;}
+    .note{font-size:0.9em; color:#555;}
+    #status{margin-top:20px; font-weight:600;}
+  </style>
+</head>
+<body>
+  <h2>EMMANUEL CHURCH OF WEATHERFORD, TX — HOLD HARMLESS AGREEMENT</h2>
+  <form id="waiverForm">
+    <div>
+      <label>Organization / Date</label>
+      <input type="text" id="organization_date" value="Liberty Dance Fellowship — 2025-2026">
+    </div>
+    <label>Parent(s) Names:</label>
+    <input type="text" id="parent_names" required>
+
+    <label>Address (Street, City, State, Zip):</label>
+    <input type="text" id="address">
+
+    <div class="phones">
+      <div><label>Mobile</label><input type="text" id="mobile_phone"></div>
+      <div><label>Home</label><input type="text" id="home_phone"></div>
+      <div><label>Work</label><input type="text" id="work_phone"></div>
+      <div><label>Alternate</label><input type="text" id="alt_phone"></div>
+    </div>
+
+    <h3>Info on Child(ren)</h3>
+    <div id="children"></div>
+    <button type="button" id="addChild">+ Add Child</button>
+    <button type="button" id="removeChild">- Remove Last Child</button>
+
+    <h3>Agreement</h3>
+    <p>I, <span style="display:inline-block; width:300px; border-bottom:1px solid #000;" id="printed_parent_name_area"></span> (printed name of parent/legal guardian), being the parent or legal guardian of the afore-named child(ren) hereby give my consent for my minor child(ren) to participate in Liberty Dance Fellowship held on the property of Emmanuel Church of Weatherford, Texas. I understand that reasonable safety precautions have been taken by Emmanuel Church of Weatherford, Texas, and I understand that the possibility of an unforeseen hazard exists. I further agree not to hold Emmanuel Baptist Church of Weatherford, Texas, its trustees, leaders, employees, members, or volunteers liable for damages, losses, diseases, or injuries incurred by the minor child(ren) named on this form.</p>
+
+    <label>Parent Signature (draw below):</label>
+    <canvas id="signature-pad"></canvas>
+    <div><button type="button" id="clearSig">Clear Signature</button></div>
+
+    <label>Printed Name (parent/legal guardian):</label>
+    <input type="text" id="printed_name" required>
+
+    <label>Date:</label>
+    <input type="date" id="date_signed" required>
+
+    <div style="margin-top:18px;">
+      <button type="submit" id="submitBtn">Submit Waiver</button>
+    </div>
+
+    <p class="note">Once you click “Submit Waiver,” your information will be securely sent to Liberty Dance Fellowship and saved to our records.</p>
+    <div id="status"></div>
+  </form>
+
+  <script>
+    const childrenDiv = document.getElementById('children');
+    function addChildRow() {
+      const idx = childrenDiv.children.length + 1;
+      const row = document.createElement('div');
+      row.className = 'child-row';
+      row.innerHTML = '<input type="text" placeholder="Name" class="child-name" data-index="'+idx+'">        <input type="text" placeholder="MM/DD/YYYY" class="child-dob" data-index="'+idx+'">        <input type="text" placeholder="Age" class="child-age small" data-index="'+idx+'">        <input type="text" placeholder="M/F" class="child-sex small" data-index="'+idx+'">';
+      childrenDiv.appendChild(row);
+    }
+    addChildRow();
+    document.getElementById('addChild').addEventListener('click', addChildRow);
+    document.getElementById('removeChild').addEventListener('click', ()=>{ if(childrenDiv.lastChild) childrenDiv.removeChild(childrenDiv.lastChild); });
+
+    const canvas = document.getElementById('signature-pad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvas.offsetHeight * ratio;
+      canvas.getContext("2d").scale(ratio, ratio);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    canvas.addEventListener('pointerdown', (e)=>{ drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
+    canvas.addEventListener('pointermove', (e)=>{ if(!drawing) return; ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); });
+    window.addEventListener('pointerup', ()=>{ drawing = false; });
+    document.getElementById('clearSig').addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); });
+
+    function isCanvasBlank(c) {
+      const blank = document.createElement('canvas');
+      blank.width = c.width; blank.height = c.height;
+      const bctx = blank.getContext('2d');
+      bctx.fillStyle = '#fff';
+      bctx.fillRect(0,0,blank.width, blank.height);
+      return c.toDataURL() === blank.toDataURL();
+    }
+
+    document.getElementById('waiverForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const data = {
+        organization_date: document.getElementById('organization_date').value,
+        parent_names: document.getElementById('parent_names').value,
+        address: document.getElementById('address').value,
+        phones: {
+          mobile: document.getElementById('mobile_phone').value,
+          home: document.getElementById('home_phone').value,
+          work: document.getElementById('work_phone').value,
+          alt: document.getElementById('alt_phone').value
+        },
+        children: Array.from(document.querySelectorAll('.child-row')).map(r=>({
+          name: r.querySelector('.child-name').value,
+          dob: r.querySelector('.child-dob').value,
+          age: r.querySelector('.child-age').value,
+          sex: r.querySelector('.child-sex').value
+        })),
+        printed_name: document.getElementById('printed_name').value,
+        date_signed: document.getElementById('date_signed').value,
+        signature_image: isCanvasBlank(canvas) ? null : canvas.toDataURL()
+      };
+
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = "Submitting... Please wait.";
+
+      try {
+        await fetch("https://script.google.com/macros/s/AKfycbyB_cj-nfzNqy4oSidGb1vGeTOGQDixW1jXwqKLATPKozfqlH4Vm_364d-Oj1tVhBBF6w/exec", {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify(data)
+        });
+        statusEl.textContent = "✅ Submitted successfully! Thank you.";
+        document.getElementById('waiverForm').reset();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        childrenDiv.innerHTML = "";
+        addChildRow();
+      } catch (err) {
+        statusEl.textContent = "❌ There was an error submitting the form. Please try again.";
+      }
+    });
+
+    document.getElementById('printed_name').addEventListener('input', (e)=>{
+      document.getElementById('printed_parent_name_area').textContent = e.target.value;
+    });
+  </script>
+</body>
+</html>
